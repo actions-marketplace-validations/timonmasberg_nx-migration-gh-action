@@ -1,32 +1,23 @@
 import {exec} from '@actions/exec'
 
-export async function pushChangesToRemote(
-  commitMessage: string,
-  repoName: string,
-  origin: string
+export async function prepareGit(
+  origin: string,
+  branchName: string
 ): Promise<void> {
+  await exec(`git checkout -b ${branchName}`)
   await exec(
     `git config --local user.email "github-actions[bot]@users.noreply.github.com"`
   )
   await exec(`git config --local user.name "github-actions[bot]"`)
   await exec(`git remote set-url origin ${origin}`)
-
-  await exec(`git checkout -b ${repoName}`)
-  await exec('git add .')
-  await exec(`git commit -m "${commitMessage}"`)
-
-  await exec(`git push --force-with-lease -u origin ${repoName}`)
 }
 
-export function makePRBody(
-  releaseNotes: string,
-  publishedAt: string,
-  releaseUrl: string
-): string {
+export async function pushChangesToRemote(branchName: string): Promise<void> {
+  await exec(`git push --force-with-lease -u origin ${branchName}`)
+}
+
+export function makePRBody(publishedAt: string, releaseUrl: string): string {
   return `This PR migrates the project to the latest stable version of NX.  
-  
-**NX Release Notes:**  
-${releaseNotes}  
 
 **Published:**  
 ${publishedAt}  

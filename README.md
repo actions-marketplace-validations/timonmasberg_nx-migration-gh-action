@@ -6,7 +6,7 @@ If a new version exists, it automatically runs `nx migrate latest`, installs all
 ## Usage
 
 The easiest way is to check for new versions with a scheduled workflow. 
-Make sure to checkout the branch you want apply the migrations in case there is a new version of NX.
+Make sure to checkout the branch you want apply the migrations in case there is a new version of NX. The Action will create commits for the applied migrations.
 
 For a detailed description of all parameters check the [action.yml](action.yml).
 
@@ -23,12 +23,12 @@ jobs:
     
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
+    - run: npm ci
     - uses: timonmasberg/nx-migration-gh-action@v1.0.0
       with:
         repoToken: ${{ secrets.GITHUB_TOKEN }}
         # Optional:
-        commitMessage: 'deps: migrate nx to $VERSION'
         prTitle: 'Migrates NX to $VERSION'
         includeMigrationsFile: false # `migrations.json` will not be included in this PR.
         base: 'dev'
@@ -47,4 +47,4 @@ As I have done this mostly just to fit our needs over at [Kordis](https://github
 Also tests are currently rare ;)  
 I highly appreciate any contribution. 
 
-Make sure to run `npm all` before pushing and to check-in the `dist` folder if you make changes in `src`.
+Make sure to run `npm run all` before pushing and to check-in the `dist` folder if you make changes in `src`.

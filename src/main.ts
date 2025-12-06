@@ -2,8 +2,9 @@ import * as core from '@actions/core'
 import * as github from '@actions/github'
 import {getInputs} from './inputs-helper'
 import {getCurrentNxVersion, getLatestNxVersion} from './nx-version'
-import {makePRBody, pushChangesToRemote} from './git'
+import {makePRBody, prepareGit, pushChangesToRemote} from './git'
 import {migrate} from './nx-migrate'
+import {exec} from '@actions/exec'
 
 async function run(): Promise<void> {
   try {
@@ -51,16 +52,19 @@ async function run(): Promise<void> {
       }
     )
 
+    core.debug('Setting up git user, origin and branch...')
+    const origin = `https://x-access-token:${inputs.repoToken}@github.com/${github.context.repo.owner}/${github.context.repo.repo}`
+    await prepareGit(origin, branchName)
+
+    core.debug('Installing deps...')
+    await exec('npm ci')
+
     core.debug('Starting migrations...')
     await migrate(inputs.includeMigrationsFile)
 
     core.debug('Pushing changes...')
-    const commitMessage = inputs.commitMessage.replace(
-      '$VERSION',
-      latestNxVersion
-    )
-    const origin = `https://x-access-token:${inputs.repoToken}@github.com/${github.context.repo.owner}/${github.context.repo.repo}`
-    await pushChangesToRemote(commitMessage, branchName, origin)
+
+    await pushChangesToRemote(branchName)
     core.info(`Pushed changes to origin/${branchName}`)
 
     core.debug('Creating Pull Request...')
@@ -69,12 +73,11 @@ async function run(): Promise<void> {
       ...github.context.repo,
       title: inputs.prTitle.replace('$VERSION', latestNxVersion),
       body: makePRBody(
-        latestNxGHRelease.body || 'No release notes',
         latestNxGHRelease.created_at,
         latestNxGHRelease.html_url
       ),
       head: branchName,
-      base: 'main'
+      base: inputs.base
     })
 
     core.info(`Pull Request created: ${newPr.issue_url}`)
